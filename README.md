@@ -1,3 +1,3 @@
 # econometrics
 
-group assignment aied at checking ability of taylor rule in predicting cb interest rates
+group assignment aimed at checking ability of taylor rule to predict policy interest rates in Australia
