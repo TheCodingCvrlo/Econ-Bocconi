@@ -1,1 +1,37 @@
-#### ECONOMETRICS ASSIGNMENT Y21/22 ####
+##### ECONOMETRICS ASSIGNMENT Y21/22 ####
+
+# Giovanni Gatti
+# Antonio Ventura
+# Carlo Antonio Patti
+
+########################################### TAYLOR RULE IN AUSTRALIA ####################################################
+
+
+
+
+# Clearing the workspace
+rm(list=ls())
+
+# Getting the path of your current open file
+current_path = rstudioapi::getActiveDocumentContext()$path
+setwd(dirname(current_path ))
+
+# do not touch
+path_list = as.list(strsplit(current_path, '')[[1]])
+clean_path_list = path_list[1:(length(path_list)-9)]
+clean_path = paste(clean_path_list, collapse='')
+
+
+#importing data
+output <- read.csv(paste(clean_path, '\\australia_gdp.csv',sep = ''), fileEncoding="UTF-8-BOM")
+rates <- read.csv(paste(clean_path, '\\short_term_interest_rates.csv',sep = ''))
+inflation <- read.csv(paste(clean_path, '\\CPI.csv',sep = ''))
+
+
+
+
+
+
+
+
+
