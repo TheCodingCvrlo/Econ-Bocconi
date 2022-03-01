@@ -16,22 +16,71 @@ rm(list=ls())
 current_path = rstudioapi::getActiveDocumentContext()$path
 setwd(dirname(current_path ))
 
-# do not touch
+
+# importing libraries
+
+library(ggplot2)
+
+
+
+# DO NOT TOUCH - extraction of path root from current path
 path_list = as.list(strsplit(current_path, '')[[1]])
 clean_path_list = path_list[1:(length(path_list)-9)]
 clean_path = paste(clean_path_list, collapse='')
 
 
 #importing data
-output <- read.csv(paste(clean_path, '\\australia_gdp.csv',sep = ''), fileEncoding="UTF-8-BOM")
+output <- read.csv(paste(clean_path, '\\australia_gdp.csv',sep = ''))
 rates <- read.csv(paste(clean_path, '\\short_term_interest_rates.csv',sep = ''))
-inflation <- read.csv(paste(clean_path, '\\CPI.csv',sep = ''))
+inflation <- read.csv(paste(clean_path, '\\inflation.csv',sep = ''))
+
+
+##### MODEL #####
+
+#  i_t = b1 + b2* pi_t + b3* y_t + eps
+
+# DEPENDENT VARIABLE
+
+# i_t - policy rate in Australia in year t
+
+# INDEPENDENT VARIABLES
+
+# pi_t - inflation (CPI percentage change) from year t to year t+1
+# y_t - output (GDP) in year t
+
+#INTERCEPT
+
+# b1 captures equilibrium interest rate, inflation target and any other deviation in the mean of our model
+
+
+###### PLOTTING RAW DATA #######
+
+# colnames(inflation)
+colnames(inflation) <- c('DATE', 'INF')
+
+# GDP/YEAR
+ggplot(output, aes(x = Date, y  = GDP)) + 
+  geom_point() + 
+  labs(
+    title = 'Australian GDP 1960-2021',
+    x = ''
+  )
+
+# POLICY RATE/YEAR
+ggplot(rates, aes(x = TIME, y  = Value)) + 
+  geom_point() + 
+  labs(
+    title = 'Policy Rates 1980-2020',
+    x = '',
+    y = 'Interest Rate'
+  )
+
+# INFLATION/YEAR
+
+  # TODO
 
 
 
 
 
-
-
-
-
+     
