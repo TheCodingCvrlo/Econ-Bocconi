@@ -16,9 +16,11 @@ setwd(dirname(current_path ))
 
 # installing / importing libraries
 install.packages('tseries')
+install.packages('tidyverse')
 library(ggplot2)
 library(lmtest)
 library(tseries)
+library(tidyverse)
 
 # DO NOT TOUCH - extraction of path root from current path
 path_list = as.list(strsplit(current_path, '')[[1]])
@@ -33,17 +35,30 @@ output <- read.csv(paste(clean_path, '\\australia_gdp.csv',sep = ''))
 rates <- read.csv(paste(clean_path, '\\short_term_interest_rates.csv',sep = ''))
 inflation <- read.csv(paste(clean_path, '\\inflation.csv',sep = ''))
 
-#setting cutoff
-output <- output[output$Date > 1979,]
-##### CHANGE TO 1979 WHEN DATABASE GETS CLEANED #####
-inflation<-inflation[inflation$DATE > 1980,]
+rates = select(rates, TIME, Value)
 
-# rescaling GDP (from USD to Million USD)
-output$GDP = output$GDP/1000000
+#renaming columns
+colnames(inflation) <- c('YEAR', 'INF')
+colnames(output) <- c('YEAR', 'GDP')
+colnames(rates) <- c('YEAR', 'RATE')
+
+#setting cutoff
+output <- output[output$YEAR > 1979,]
+inflation <- inflation[inflation$YEAR > 1979,]
+
+# rescaling GDP (from USD to Billion USD)
+output$GDP = output$GDP/1000000000
+
 
 # estimating output gap through Linear Trend Method (add sources for justification)
-gdp_trend = lm(GDP ~ Date, data = output)
+gdp_trend = lm(GDP ~ YEAR, data = output)
 
+betas <- coefficients(gdp_trend)
+
+#merging data in one dataframe
+
+df <- list(rates, output, inflation)
+df = df %>% reduce(full_join, by = 'YEAR')
 
 
 ################################## MODEL #######################################
@@ -66,19 +81,20 @@ gdp_trend = lm(GDP ~ Date, data = output)
 
 ############################# PLOTTING RAW DATA #########################################
 
-# colnames(inflation)
-colnames(inflation) <- c('DATE', 'INF')
 
 # GDP/YEAR
-ggplot(output, aes(x = Date, y  = GDP)) + 
+ggplot(output, aes(x = YEAR, y  = GDP)) + 
   geom_point() + 
   labs(
-    title = 'Australian GDP 1960-2021',
+    title = 'Australian GDP 1980-2021',
     x = ''
-  )
+  ) +
+  stat_smooth(method = 'lm', formula = y~x)
+
+
 
 # POLICY RATE/YEAR
-ggplot(rates, aes(x = TIME, y  = Value)) + 
+ggplot(rates, aes(x = YEAR, y  = RATE)) + 
   geom_point() + 
   labs(
     title = 'Policy Rates 1980-2020',
@@ -87,8 +103,14 @@ ggplot(rates, aes(x = TIME, y  = Value)) +
   )
 
 # INFLATION/YEAR
+ggplot(inflation, aes(x = YEAR, y  = INF)) + 
+  geom_point() + 
+  labs(
+    title = 'CPI-measured Inflation 1980-2020',
+    x = '',
+    y = 'Inflation Rate'
+  )
 
-  # TODO
 
 
 ################################ OLS ESTIMATION ######################################
@@ -128,8 +150,10 @@ jarque.bera.test(res)
 ############################## EXTENDING THE MODEL ###############################
 
 #TODO - Variable Selection
-  # pick features
-    # wages? (correlation with output gap)
-    # foreign interest rates?
-    # lagged interest rates? (dynamic model, issues with testing)
-  # forward/backward pass
+# pick features
+# wages? (correlation with output gap)
+# foreign interest rates?
+# lagged interest rates? (dynamic model, issues with testing)
+# forward/backward pass
+
+
