@@ -6,9 +6,6 @@
 
 ########################################### TAYLOR RULE IN AUSTRALIA ####################################################
 
-
-
-
 # Clearing the workspace
 rm(list=ls())
 
@@ -17,11 +14,11 @@ current_path = rstudioapi::getActiveDocumentContext()$path
 setwd(dirname(current_path ))
 
 
-# importing libraries
-
+# installing / importing libraries
+install.packages('tseries')
 library(ggplot2)
-
-
+library(lmtest)
+library(tseries)
 
 # DO NOT TOUCH - extraction of path root from current path
 path_list = as.list(strsplit(current_path, '')[[1]])
@@ -29,13 +26,27 @@ clean_path_list = path_list[1:(length(path_list)-9)]
 clean_path = paste(clean_path_list, collapse='')
 
 
+##################################### DATA PREPARATION ####################################
+
 #importing data
 output <- read.csv(paste(clean_path, '\\australia_gdp.csv',sep = ''))
 rates <- read.csv(paste(clean_path, '\\short_term_interest_rates.csv',sep = ''))
 inflation <- read.csv(paste(clean_path, '\\inflation.csv',sep = ''))
 
+#setting cutoff
+output <- output[output$Date > 1979,]
+##### CHANGE TO 1979 WHEN DATABASE GETS CLEANED #####
+inflation<-inflation[inflation$DATE > 1980,]
 
-##### MODEL #####
+# rescaling GDP (from USD to Million USD)
+output$GDP = output$GDP/1000000
+
+# estimating output gap through Linear Trend Method (add sources for justification)
+gdp_trend = lm(GDP ~ Date, data = output)
+
+
+
+################################## MODEL #######################################
 
 #  i_t = b1 + b2* pi_t + b3* y_t + eps
 
@@ -53,7 +64,7 @@ inflation <- read.csv(paste(clean_path, '\\inflation.csv',sep = ''))
 # b1 captures equilibrium interest rate, inflation target and any other deviation in the mean of our model
 
 
-###### PLOTTING RAW DATA #######
+############################# PLOTTING RAW DATA #########################################
 
 # colnames(inflation)
 colnames(inflation) <- c('DATE', 'INF')
@@ -80,7 +91,45 @@ ggplot(rates, aes(x = TIME, y  = Value)) +
   # TODO
 
 
+################################ OLS ESTIMATION ######################################
+
+taylor_reg <- lm(rates$Value ~ inflation$INF + output$GDP)
+
+summary(taylor_reg)
+coeftest(taylor_reg)
 
 
+# TODO - what are these plots?
+# plot(taylor_reg)
 
-     
+############################ TESTING MODEL ASSUMPTIONS ################################
+
+# TODO: UNDERSTAND WTF THESE ARE
+
+
+resettest(taylor_reg, power=3, type="regressor")
+
+# OK?
+gqtest(taylor_reg, point = 0.2)
+
+# PROBLEM?
+bptest(taylor_reg)
+
+
+dwtest(taylor_reg)
+
+# PROBLEM? (serial correlation)
+bgtest(taylor_reg)
+
+#Jarque-Bera Test for Normality of Residuals - OK?
+res <- residuals(taylor_reg) n
+jarque.bera.test(res)     
+
+############################## EXTENDING THE MODEL ###############################
+
+#TODO - Variable Selection
+  # pick features
+    # wages? (correlation with output gap)
+    # foreign interest rates?
+    # lagged interest rates? (dynamic model, issues with testing)
+  # forward/backward pass
