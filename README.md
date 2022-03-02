@@ -1,3 +1,9 @@
-# econometrics
+# BOCCONI UNIVERSITY Y21/22 ECONOMETRICS ASSIGNMENT
 
-group assignment aimed at checking ability of taylor rule to predict policy interest rates in Australia
+Structure:
+1) #TODO
+2) x
+3) x
+4) x
+5) x
+
