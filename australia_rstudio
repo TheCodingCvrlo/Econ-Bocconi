@@ -51,9 +51,12 @@ output$GDP = output$GDP/1000000000
 
 
 # estimating output gap through Linear Trend Method (add sources for justification)
-gdp_trend = lm(GDP ~ YEAR, data = output)
+# too long timespan?
 
-betas <- coefficients(gdp_trend)
+# gdp_trend = lm(GDP ~ YEAR, data = output)
+# betas <- coefficients(gdp_trend)
+# avg_growth = betas[2]/mean(output$GDP)
+# growth_col = rep(0,times = 42)
 
 #merging data in one dataframe
 
@@ -100,7 +103,8 @@ ggplot(rates, aes(x = YEAR, y  = RATE)) +
     title = 'Policy Rates 1980-2020',
     x = '',
     y = 'Interest Rate'
-  )
+  ) +
+  stat_smooth(method = 'lm', formula = y~x)
 
 # INFLATION/YEAR
 ggplot(inflation, aes(x = YEAR, y  = INF)) + 
@@ -108,17 +112,42 @@ ggplot(inflation, aes(x = YEAR, y  = INF)) +
   labs(
     title = 'CPI-measured Inflation 1980-2020',
     x = '',
-    y = 'Inflation Rate'
-  )
+    y = 'Inflation Rate (%)'
+  ) +
+  stat_smooth(method = 'lm', formula = y~x)
 
 
 
 ################################ OLS ESTIMATION ######################################
 
-taylor_reg <- lm(rates$Value ~ inflation$INF + output$GDP)
+taylor_reg <- lm(RATE ~ GDP + INF, data = df)
 
 summary(taylor_reg)
 coeftest(taylor_reg)
+
+ggplot(df) + 
+  aes(x = YEAR) + 
+  geom_point(aes(y = RATE)) + 
+  geom_point(aes(y = fitted(taylor_reg)),color = 'red')
+
+#plotting distribution of residuals
+
+res <- residuals(taylor_reg)
+
+res = data.frame(res)
+res$ind = rep(1:41)
+
+ggplot(res) +
+  aes(x = res) + 
+  geom_histogram(aes(y = stat(count) / sum(count)), colour = 'black', fill = 'white',bins = 10) + 
+  geom_density(alpha = .3, fill = "#FF6666",size = 1) + 
+  labs(
+    title = 'Residuals',
+    x = 'Residual Value',
+    y = 'Relative Frequency'
+  )
+
+
 
 
 # TODO - what are these plots?
@@ -126,26 +155,60 @@ coeftest(taylor_reg)
 
 ############################ TESTING MODEL ASSUMPTIONS ################################
 
-# TODO: UNDERSTAND WTF THESE ARE
+# TODO: complete, explain
 
 
+#Testing Linearity of Parameters
 resettest(taylor_reg, power=3, type="regressor")
+#H0 is accepted with pval = 0.1769
 
-# OK?
-gqtest(taylor_reg, point = 0.2)
 
-# PROBLEM?
+#Jarque-Bera Test for Normality of Residuals
+jarque.bera.test(residuals(taylor_reg))     
+#H0 is accepted with pval = 0.618
+
+
+# Testing Homoscedasticity
+
+# preliminary analysis: plotting residuals
+ggplot(data = res) + 
+  aes(y = res, x = ind) + 
+  geom_point() + 
+  stat_smooth(method = 'lm', alpha = 0)
+
+#visual inspection suggesting very subtle downward trend, decreasing variance
+
+#Goldfeld-Quandt test
+gqtest(taylor_reg, point = 0.4, alternative = 'less')
+
+#POINT = 0.2
+# H0 is accepted with a p-val of 0.748 for test against H1: increasing variance, 
+# still accepted but with a lower p-value (0.252) against H1. decreasing variance
+
+#POINT = 0.4
+
+#H0 is strongly rejected: we have a problem of heteroscedasticity
+
+
+#since by BP test (see above) normality hold, we can also try the BP test:
+#Breush-Pagan Test
 bptest(taylor_reg)
 
+#the BP test does not reject H0 for significance levels <=0.01
 
+#Testing Correlation of Residuals
+
+# Durbin-Watson test for serial correlation 
 dwtest(taylor_reg)
 
-# PROBLEM? (serial correlation)
-bgtest(taylor_reg)
+# Breusch-Godfrey test for serial correlation of order up to 3
+bgtest(taylor_reg, 3)
 
-#Jarque-Bera Test for Normality of Residuals - OK?
-res <- residuals(taylor_reg) n
-jarque.bera.test(res)     
+# DW test strongly rejects H0,
+# BG test (m = 3) rejects H0 down to alpha = 0.004.
+
+# Strong indicators of serial correlation hint to a likely problem of omitted variables.
+# ...hence we proceed to extend the model.
 
 ############################## EXTENDING THE MODEL ###############################
 
