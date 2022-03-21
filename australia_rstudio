@@ -4,6 +4,7 @@
 # Antonio Ventura
 # Carlo Antonio Patti
 
+
 ########################################### TAYLOR RULE IN AUSTRALIA ####################################################
 
 # Clearing the workspace
@@ -24,7 +25,7 @@ library(tidyverse)
 
 # DO NOT TOUCH - extraction of path root from current path
 path_list = as.list(strsplit(current_path, '')[[1]])
-clean_path_list = path_list[1:(length(path_list)-9)]
+clean_path_list = path_list[1:(length(path_list)-9)] #TODO: decide nesting of directories, fix this accordingly
 clean_path = paste(clean_path_list, collapse='')
 
 
@@ -34,33 +35,29 @@ clean_path = paste(clean_path_list, collapse='')
 output <- read.csv(paste(clean_path, '\\australia_gdp.csv',sep = ''))
 rates <- read.csv(paste(clean_path, '\\short_term_interest_rates.csv',sep = ''))
 inflation <- read.csv(paste(clean_path, '\\inflation.csv',sep = ''))
+out_gap <- read.csv(paste(clean_path,'\\output_gap.csv',sep = ''))
 
+out_gap = select(out_gap,TIME,Value)
 rates = select(rates, TIME, Value)
 
 #renaming columns
 colnames(inflation) <- c('YEAR', 'INF')
 colnames(output) <- c('YEAR', 'GDP')
 colnames(rates) <- c('YEAR', 'RATE')
+colnames(out_gap) <- c('YEAR', 'GAP')
 
 #setting cutoff
-output <- output[output$YEAR > 1979,]
-inflation <- inflation[inflation$YEAR > 1979,]
+output <- output[output$YEAR > 1984,]
+inflation <- inflation[inflation$YEAR > 1984,]
+rates <- rates[rates$YEAR > 1984,]
 
 # rescaling GDP (from USD to Billion USD)
 output$GDP = output$GDP/1000000000
 
 
-# estimating output gap through Linear Trend Method (add sources for justification)
-# too long timespan?
-
-# gdp_trend = lm(GDP ~ YEAR, data = output)
-# betas <- coefficients(gdp_trend)
-# avg_growth = betas[2]/mean(output$GDP)
-# growth_col = rep(0,times = 42)
-
 #merging data in one dataframe
 
-df <- list(rates, output, inflation)
+df <- list(rates, output, inflation,out_gap)
 df = df %>% reduce(full_join, by = 'YEAR')
 
 
@@ -92,7 +89,7 @@ ggplot(output, aes(x = YEAR, y  = GDP)) +
     title = 'Australian GDP 1980-2021',
     x = ''
   ) +
-  stat_smooth(method = 'lm', formula = y~x)
+  stat_smooth(method = 'lm', formula = y~x, alpha = 0.2)
 
 
 
@@ -115,6 +112,19 @@ ggplot(inflation, aes(x = YEAR, y  = INF)) +
     y = 'Inflation Rate (%)'
   ) +
   stat_smooth(method = 'lm', formula = y~x)
+
+#OUT GAP/ YEAR
+
+ggplot(out_gap, aes(x = YEAR, y  = GAP)) + 
+  geom_point() + 
+  labs(
+    title = 'Output Gap as % of Potential Output',
+    x = '',
+    y = 'Output Gap'
+  ) +
+  stat_smooth(method = 'lm', formula = y~x)
+
+
 
 
 
@@ -147,20 +157,15 @@ ggplot(res) +
     y = 'Relative Frequency'
   )
 
-
-
-
-# TODO - what are these plots?
-# plot(taylor_reg)
-
 ############################ TESTING MODEL ASSUMPTIONS ################################
 
 # TODO: complete, explain
 
 
 #Testing Linearity of Parameters
-resettest(taylor_reg, power=3, type="regressor")
-#H0 is accepted with pval = 0.1769
+resettest(taylor_reg,power = 2:3, type="fitted")
+  
+#H0 is accepted with pval = 0.1217
 
 
 #Jarque-Bera Test for Normality of Residuals
@@ -169,6 +174,8 @@ jarque.bera.test(residuals(taylor_reg))
 
 
 # Testing Homoscedasticity
+
+# TODO: ADD RESIDUALS TO DF, SORT BY DESIRED VARIABLE (or compare different orderings)
 
 # preliminary analysis: plotting residuals
 ggplot(data = res) + 
@@ -191,10 +198,10 @@ gqtest(taylor_reg, point = 0.4, alternative = 'less')
 
 
 #since by BP test (see above) normality hold, we can also try the BP test:
-#Breush-Pagan Test
-bptest(taylor_reg)
+#Breush-Pagan Test (taking output & inflation into consideration)
+bptest(taylor_reg) # varformula = output + inflation
 
-#the BP test does not reject H0 for significance levels <=0.01
+ #the BP test does not reject H0 for significance levels <=0.01
 
 #Testing Correlation of Residuals
 
@@ -205,7 +212,7 @@ dwtest(taylor_reg)
 bgtest(taylor_reg, 3)
 
 # DW test strongly rejects H0,
-# BG test (m = 3) rejects H0 down to alpha = 0.004.
+# BG test (m = 3) rejects H0 down to alpha = 0.05.
 
 # Strong indicators of serial correlation hint to a likely problem of omitted variables.
 # ...hence we proceed to extend the model.
@@ -218,5 +225,50 @@ bgtest(taylor_reg, 3)
 # foreign interest rates?
 # lagged interest rates? (dynamic model, issues with testing)
 # forward/backward pass
+
+
+
+########################## ALTERNATIVE (GAP)  ############################à
+
+reg_1 = lm(RATE ~ GAP + INF, data = df)
+
+summary(reg_1)
+
+
+
+
+
+######################### DYNAMIC VERSION ####################################
+
+
+# Adding lagged interest rates to the dataframe
+# IMPORTANT: The first term is simply set to the same year value
+
+rr = df['RATE']
+rr_shifted <- c(rr$RATE[1],rr$RATE[1:35])
+df$SHIFTED_RATE <- rr_shifted
+
+
+# IMPORTANT: DO NOT USE DW TEST
+
+
+reg_dynamic <- lm(RATE ~ SHIFTED_RATE + GAP + INF, data = df)
+
+summary(reg_dynamic)
+
+# TESTING FOR AUTOCORRELATION
+
+bgtest(reg_dynamic, 3)
+
+# introducing lagged interest rates seems to solve any problem of
+# autocorrelation up to order 3
+
+# TODO: implement remaining tests, make comparisons
+
+
+
+
+
+
 
 
