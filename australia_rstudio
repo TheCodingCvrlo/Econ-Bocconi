@@ -145,7 +145,7 @@ ggplot(df) +
 res <- residuals(taylor_reg)
 
 res = data.frame(res)
-res$ind = rep(1:41)
+res$ind = rep(1:36)
 
 ggplot(res) +
   aes(x = res) + 
@@ -233,6 +233,12 @@ bgtest(taylor_reg, 3)
 reg_1 = lm(RATE ~ GAP + INF, data = df)
 
 summary(reg_1)
+
+# output gap seems to be nonsignificant??
+
+reg_2 = lm(RATE ~ GDP + INF, data = df)
+
+summary(reg_2)
 
 
 
