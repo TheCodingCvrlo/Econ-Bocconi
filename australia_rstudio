@@ -28,37 +28,40 @@ path_list = as.list(strsplit(current_path, '')[[1]])
 clean_path_list = path_list[1:(length(path_list)-9)] #TODO: decide nesting of directories, fix this accordingly
 clean_path = paste(clean_path_list, collapse='')
 
-
 ##################################### DATA PREPARATION ####################################
 
-#importing data
-output <- read.csv(paste(clean_path, '\\australia_gdp.csv',sep = ''))
-rates <- read.csv(paste(clean_path, '\\short_term_interest_rates.csv',sep = ''))
-inflation <- read.csv(paste(clean_path, '\\inflation.csv',sep = ''))
-out_gap <- read.csv(paste(clean_path,'\\output_gap.csv',sep = ''))
-
-out_gap = select(out_gap,TIME,Value)
-rates = select(rates, TIME, Value)
-
-#renaming columns
-colnames(inflation) <- c('YEAR', 'INF')
-colnames(output) <- c('YEAR', 'GDP')
-colnames(rates) <- c('YEAR', 'RATE')
-colnames(out_gap) <- c('YEAR', 'GAP')
-
-#setting cutoff
-output <- output[output$YEAR > 1984,]
-inflation <- inflation[inflation$YEAR > 1984,]
-rates <- rates[rates$YEAR > 1984,]
-
-# rescaling GDP (from USD to Billion USD)
-output$GDP = output$GDP/1000000000
-
+# #importing data
+# output <- read.csv(paste(clean_path, '\\australia_gdp.csv',sep = ''))
+# rates <- read.csv(paste(clean_path, '\\short_term_interest_rates.csv',sep = ''))
+# inflation <- read.csv(paste(clean_path, '\\inflation.csv',sep = ''))
+# out_gap <- read.csv(paste(clean_path,'\\output_gap.csv',sep = ''))
+# 
+# out_gap = select(out_gap,TIME,Value)
+# rates = select(rates, TIME, Value)
+# 
+# #renaming columns
+# colnames(inflation) <- c('YEAR', 'INF')
+# colnames(output) <- c('YEAR', 'GDP')
+# colnames(rates) <- c('YEAR', 'RATE')
+# colnames(out_gap) <- c('YEAR', 'GAP')
+# 
+# #setting cutoff
+# output <- output[output$YEAR > 1984,]
+# inflation <- inflation[inflation$YEAR > 1984,]
+# rates <- rates[rates$YEAR > 1984,]
+# 
+# # rescaling GDP (from USD to Billion USD)
+# output$GDP = output$GDP/1000000000
+# 
 
 #merging data in one dataframe
 
-df <- list(rates, output, inflation,out_gap)
-df = df %>% reduce(full_join, by = 'YEAR')
+# df <- list(rates, output, inflation,out_gap)
+# df = df %>% reduce(full_join, by = 'YEAR')
+# 
+# write.csv(df, paste(clean_path,'\\df_final.csv',sep = ''))
+
+df <- read.csv(paste(clean_path,'\\df_final.csv',sep = ''))
 
 
 ################################## MODEL #######################################
@@ -83,7 +86,7 @@ df = df %>% reduce(full_join, by = 'YEAR')
 
 
 # GDP/YEAR
-ggplot(output, aes(x = YEAR, y  = GDP)) + 
+ggplot(df, aes(x = YEAR, y  = GDP)) + 
   geom_point() + 
   labs(
     title = 'Australian GDP 1980-2021',
@@ -94,7 +97,7 @@ ggplot(output, aes(x = YEAR, y  = GDP)) +
 
 
 # POLICY RATE/YEAR
-ggplot(rates, aes(x = YEAR, y  = RATE)) + 
+ggplot(df, aes(x = YEAR, y  = RATE)) + 
   geom_point() + 
   labs(
     title = 'Policy Rates 1980-2020',
@@ -104,7 +107,7 @@ ggplot(rates, aes(x = YEAR, y  = RATE)) +
   stat_smooth(method = 'lm', formula = y~x)
 
 # INFLATION/YEAR
-ggplot(inflation, aes(x = YEAR, y  = INF)) + 
+ggplot(df, aes(x = YEAR, y  = INF)) + 
   geom_point() + 
   labs(
     title = 'CPI-measured Inflation 1980-2020',
@@ -115,14 +118,14 @@ ggplot(inflation, aes(x = YEAR, y  = INF)) +
 
 #OUT GAP/ YEAR
 
-ggplot(out_gap, aes(x = YEAR, y  = GAP)) + 
+ggplot(df, aes(x = YEAR, y  = GAP)) + 
   geom_point() + 
   labs(
     title = 'Output Gap as % of Potential Output',
     x = '',
     y = 'Output Gap'
   ) +
-  stat_smooth(method = 'lm', formula = y~x)
+  geom_smooth(formula = y~x)
 
 
 
@@ -181,7 +184,8 @@ jarque.bera.test(residuals(taylor_reg))
 ggplot(data = res) + 
   aes(y = res, x = ind) + 
   geom_point() + 
-  stat_smooth(method = 'lm', alpha = 0)
+
+  stat_smooth(method = 'lm', alpha = 0, formula = y~x)
 
 #visual inspection suggesting very subtle downward trend, decreasing variance
 
@@ -270,10 +274,7 @@ bgtest(reg_dynamic, 3)
 # autocorrelation up to order 3
 
 # TODO: implement remaining tests, make comparisons
-
-
-
-
+# TODO: test for
 
 
 
