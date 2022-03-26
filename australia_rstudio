@@ -25,7 +25,7 @@ library(tidyverse)
 
 # DO NOT TOUCH - extraction of path root from current path
 path_list = as.list(strsplit(current_path, '')[[1]])
-clean_path_list = path_list[1:(length(path_list)-9)] #TODO: decide nesting of directories, fix this accordingly
+clean_path_list = path_list[1:(length(path_list)-20)] #TODO: decide nesting of directories, fix this accordingly
 clean_path = paste(clean_path_list, collapse='')
 
 ##################################### DATA PREPARATION ####################################
@@ -167,7 +167,7 @@ ggplot(res) +
 
 #Testing Linearity of Parameters
 resettest(taylor_reg,power = 2:3, type="fitted")
-  
+
 #H0 is accepted with pval = 0.1217
 
 
@@ -184,7 +184,7 @@ jarque.bera.test(residuals(taylor_reg))
 ggplot(data = res) + 
   aes(y = res, x = ind) + 
   geom_point() + 
-
+  
   stat_smooth(method = 'lm', alpha = 0, formula = y~x)
 
 #visual inspection suggesting very subtle downward trend, decreasing variance
@@ -205,7 +205,7 @@ gqtest(taylor_reg, point = 0.4, alternative = 'less')
 #Breush-Pagan Test (taking output & inflation into consideration)
 bptest(taylor_reg) # varformula = output + inflation
 
- #the BP test does not reject H0 for significance levels <=0.01
+#the BP test does not reject H0 for significance levels <=0.01
 
 #Testing Correlation of Residuals
 
@@ -223,16 +223,113 @@ bgtest(taylor_reg, 3)
 
 ############################## EXTENDING THE MODEL ###############################
 
-#TODO - Variable Selection
-# pick features
-# wages? (correlation with output gap)
-# foreign interest rates?
-# lagged interest rates? (dynamic model, issues with testing)
-# forward/backward pass
+# Introduction of the 'UNEMPLOYMENT' regressor
+unempl <- read.csv(paste(clean_path, '\\unemployment_rate.csv',sep = ''))
+unempl = select(unempl, TIME, Value)
+colnames(unempl) <- c('YEAR', 'UN')
+unempl <- unempl[unempl$YEAR > 1984,]
+
+df$UN <- unempl$UN
+
+#Plotting the data
+ggplot(unempl, aes(x = YEAR, y  = UN)) + 
+  geom_point() + 
+  labs(
+    title = 'Australian Unemployment rate 1985-2020',
+    x = ''
+  ) +
+  stat_smooth(method = 'lm', formula = y~x, alpha = 0.2)
+
+#Run the regression
+
+# GDP case
+reg_un_1 <- lm(RATE ~ GDP + INF + UN, data = df)
+summary(reg_un_1)
+coeftest(reg_un_1)
+# This way, the unemployment rate seems to be not statistically significant. The t-test has a p-value of 0.3131.
+
+# GAP case
+reg_un_2 <- lm(RATE ~ GAP + INF + UN, data = df)
+summary(reg_un_2)
+coeftest(reg_un_2)
+# This way instead the unemployment rate is statistically significant. The t-test has a p-value of 1.448e-05.
 
 
 
-########################## ALTERNATIVE (GAP)  ############################à
+# Introduction of the 'U.S. DOLLARS TO AUSTRALIAN DOLLARS SPOT EXCHANGE RATES' regressor
+exc <- read.csv(paste(clean_path, '\\exchange_us.csv',sep = ''))
+colnames(exc) <- c('YEAR', 'EXC')
+exc <- exc[exc$YEAR > 1984,]
+
+df$EXC <- exc$EXC
+
+#Plotting the data
+ggplot(exc, aes(x = YEAR, y  = EXC)) + 
+  geom_point() + 
+  labs(
+    title = 'U.S. Dollars to Australian Dollar Spot Exchange Rate 1985-2020',
+    x = ''
+  ) +
+  stat_smooth(method = 'lm', formula = y~x, alpha = 0.2)
+
+#Run the regression
+
+# GDP case
+reg_exc_1 <- lm(RATE ~ GDP + INF + UN + EXC, data = df)
+summary(reg_exc_1)
+coeftest(reg_exc_1)
+
+# GAP case
+reg_exc_2 <- lm(RATE ~ GAP + INF + UN + EXC, data = df)
+summary(reg_exc_2)
+coeftest(reg_exc_2)
+
+
+
+# Introduction of the 'AVERAGE COMMODITY PRICE INDEX ($A)' regressor
+com <- read.csv(paste(clean_path, '\\commodity.csv',sep = ''))
+colnames(com) <- c('YEAR', 'PRICE')
+com <- com[com$YEAR > 1984,]
+com <- na.omit(com)
+
+df$COM <- com$PRICE
+
+#Plotting the data
+ggplot(com, aes(x = YEAR, y  = PRICE)) + 
+  geom_point() + 
+  labs(
+    title = 'Average Commodity Price Index ($A) 1985-2020',
+    x = ''
+  ) +
+  stat_smooth(method = 'lm', formula = y~x, alpha = 0.2)
+
+#Run the regression
+
+# GDP case
+reg_com_1 <- lm(RATE ~ GDP + INF + EXC + UN + COM, data = df)
+summary(reg_com_1)
+coeftest(reg_com_1)
+
+# GAP case
+reg_com_2 <- lm(RATE ~ GAP + INF + COM + EXC, data = df)
+summary(reg_com_2)
+coeftest(reg_com_2)
+
+# Possible additional variables
+
+# US real interest rate
+real <- read.csv(paste(clean_path, '\\US_real_rate%.csv',sep = ''))
+colnames(real) <- c('YEAR', 'Rate')
+real <- real[real$YEAR > 1984,]
+
+#US 10-year Treasury yield
+tres <- read.csv(paste(clean_path, '\\US10y_treasury.csv',sep = ''))
+colnames(tres) <- c('YEAR', 'Rate')
+tres <- tres[tres$YEAR > 1984,]
+
+
+
+########################## ALTERNATIVE (GAP)  ############################
 
 reg_1 = lm(RATE ~ GAP + INF, data = df)
 
@@ -279,3 +376,10 @@ bgtest(reg_dynamic, 3)
 
 
 
+
+#TODO - Variable Selection
+# pick features
+# wages? (correlation with output gap)
+# foreign interest rates?
+# lagged interest rates? (dynamic model, issues with testing)
+# forward/backward pass
