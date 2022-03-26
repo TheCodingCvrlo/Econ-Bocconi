@@ -1,8 +1,8 @@
 ##### ECONOMETRICS ASSIGNMENT Y21/22 ####
 
-# Giovanni Gatti
-# Antonio Ventura
-# Carlo Antonio Patti
+# Giovanni Gatti - 3121689
+# Antonio Ventura - 3127698
+# Carlo Antonio Patti - 3134395
 
 
 ########################################### TAYLOR RULE IN AUSTRALIA ####################################################
@@ -12,29 +12,29 @@ rm(list=ls())
 
 # Getting the path of your current open file
 current_path = rstudioapi::getActiveDocumentContext()$path
-setwd(dirname(current_path ))
+current_dir = dirname(current_path)
+
+setwd(current_dir )
 
 
 # installing / importing libraries
-install.packages('tseries')
-install.packages('tidyverse')
+# install.packages('tseries')
+# install.packages('tidyverse')
 library(ggplot2)
 library(lmtest)
 library(tseries)
 library(tidyverse)
 
-# DO NOT TOUCH - extraction of path root from current path
-path_list = as.list(strsplit(current_path, '')[[1]])
-clean_path_list = path_list[1:(length(path_list)-20)] #TODO: decide nesting of directories, fix this accordingly
-clean_path = paste(clean_path_list, collapse='')
+
 
 ##################################### DATA PREPARATION ####################################
 
-# #importing data
-# output <- read.csv(paste(clean_path, '\\australia_gdp.csv',sep = ''))
-# rates <- read.csv(paste(clean_path, '\\short_term_interest_rates.csv',sep = ''))
-# inflation <- read.csv(paste(clean_path, '\\inflation.csv',sep = ''))
-# out_gap <- read.csv(paste(clean_path,'\\output_gap.csv',sep = ''))
+# importing data
+
+# output <- read.csv(paste(dirname(current_path),'australia_gdp.csv',sep = '/'))
+# rates <- read.csv(paste(dirname(current_path),'short_term_interest_rates.csv',sep = '/'))
+# inflation <- read.csv(paste(dirname(current_path),'inflation.csv',sep = '/'))
+# out_gap <- read.csv(paste(dirname(current_path),'inflation.csv',sep = '/'))
 # 
 # out_gap = select(out_gap,TIME,Value)
 # rates = select(rates, TIME, Value)
