@@ -61,7 +61,7 @@ library(tidyverse)
 # 
 # write.csv(df, paste(clean_path,'\\df_final.csv',sep = ''))
 
-df <- read.csv(paste(clean_path,'\\df_final.csv',sep = ''))
+df <- read.csv(paste(dirname(current_path),'df_final.csv',sep = '/'))
 
 
 ################################## MODEL #######################################
