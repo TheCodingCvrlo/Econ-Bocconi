@@ -307,6 +307,7 @@ resettest(taylor_opt,power = 2:3, type="fitted") #OK
 # TESTING FOR NORMALITY OF RESIDUALS
 res2 <- residuals(taylor_opt)
 res2 = data.frame(res2)
+res2$ind = rep(1:53)
 
 
 ggplot(res2) +
