@@ -140,7 +140,40 @@ taylor_reg <- lm(RATE ~ GAP + INF, data = df)
 summary(taylor_reg)
 
 
+#3d plot of linear regression
+#install.packages("reshape2")
+#install.packages("plotly")
 
+library(plotly)
+library(reshape2)
+
+#Graph Resolution 
+graph_reso <- 0.05
+
+#Setup Axis
+axis_x <- seq(min(df_short$GAP), max(df_short$GAP), by = graph_reso)
+axis_y <- seq(min(df_short$INF), max(df_short$INF), by = graph_reso)
+
+#Sample points
+taylor_reg_surface <- expand.grid(GAP = axis_x,INF = axis_y,KEEP.OUT.ATTRS = F)
+taylor_reg_surface$RATE <- predict.lm(taylor_reg, newdata = taylor_reg_surface)
+taylor_reg_surface <- acast(taylor_reg_surface, INF ~ GAP, value.var = "RATE") #y ~ x
+
+hcolors=c("black","black","black")
+iris_plot <- plot_ly(df_short, 
+                     x = ~GAP, 
+                     y = ~INF, 
+                     z = ~RATE,
+                     type = "scatter3d", 
+                     mode = "markers",
+                     marker = list(color = hcolors))
+iris_plot <- add_trace(p = iris_plot,
+                       z = taylor_reg_surface,
+                       x = axis_x,
+                       y = axis_y,
+                       type = "surface")
+
+iris_plot
 
 
 
