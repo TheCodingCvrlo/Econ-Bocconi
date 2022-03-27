@@ -89,7 +89,7 @@ df = df[order(df$YEAR),]
 ############################# PLOTTING RAW DATA #########################################
 
 # GDP/YEAR
-ggplot(df, aes(x = YEAR, y  = GDP)) + 
+ggplot(output, aes(x = YEAR, y  = GDP)) + 
   geom_point() + 
   labs(
     title = 'Australian GDP 1980-2021',
@@ -108,7 +108,7 @@ ggplot(rates, aes(x = YEAR, y  = RATE)) +
   stat_smooth(method = 'lm', formula = y~x)
 
 # INFLATION/YEAR
-ggplot(df, aes(x = YEAR, y  = INF)) + 
+ggplot(inflation, aes(x = YEAR, y  = INF)) + 
   geom_point() + 
   labs(
     title = 'CPI-measured Inflation 1980-2020',
@@ -125,7 +125,7 @@ ggplot(out_gap, aes(x = YEAR, y  = GAP)) +
     x = '',
     y = 'Output Gap'
   ) +
-  geom_smooth(formula = y~x)
+  geom_smooth(formula = y~x, alpha = 0)
 
 
 
@@ -138,6 +138,11 @@ df_short = df[df$YEAR > 1984,]
 # fitting the model
 taylor_reg <- lm(RATE ~ GAP + INF, data = df)
 summary(taylor_reg)
+
+
+
+
+
 
 #plotting fitted vs true values
 ggplot(df_short) + 
@@ -270,19 +275,85 @@ ggplot(PPI_commodities, aes(x = YEAR, y  = PPI)) +
 
 ##################### FEATURE SELECTION #########################
 
-# Backwards vs Forward selection
+
+df_long = df[c('YEAR','RATE','GDP','INF','UNR','EXC','RRATE','YIELD','PPI')]
+df_long = df_long[df_long$YEAR > 1967,]
 
 
+# Backwards vs Forward vs StepWise selection
+
+library(MASS)
+
+#fitting empty and full model
+taylor_full <- lm(RATE ~ GDP + PPI + INF + UNR  + YIELD + EXC + RRATE, data = df_long)
+taylor_empty = lm(RATE ~ 1, data = df_long)
+
+#performing all three selections
+stepAIC(taylor_full,direction = 'both') 
+stepAIC(taylor_full, direction = 'backward')
+stepAIC(taylor_empty, direction = 'forward',scope = ~ GDP + PPI + INF + UNR  + YIELD + EXC + RRATE)
+
+#in all three cases, the optimal set of regressors seems to be:
+# INF, YIELD, EXC, RRATE
+
+taylor_opt = lm(RATE ~ INF + YIELD + EXC + RRATE, data = df_long)
+summary(taylor_opt)
+
+######################### TESTING OPTIMIZED MODEL ####################
+
+# TESTING FOR LINEARITY OF PARAMETERS
+resettest(taylor_opt,power = 2:3, type="fitted") #OK
+
+# TESTING FOR NORMALITY OF RESIDUALS
+res2 <- residuals(taylor_opt)
+res2 = data.frame(res2)
+res2$ind = rep(1:53)
+
+ggplot(res) +
+  aes(x = res) + 
+  geom_histogram(aes(y = stat(count) / sum(count)), colour = 'black', fill = 'white',bins = 10) + 
+  geom_density(alpha = .3, fill = "#FF6666",size = 1) + 
+  labs(
+    title = 'Residuals',
+    x = 'Residual Value',
+    y = 'Relative Frequency'
+  )
+
+jarque.bera.test(residuals(taylor_opt)) #REJECTED
 
 
+# TESTING FOR HETEROSCEDASTICITY
+# preliminary analysis: plotting residuals (ordered by year)
+ggplot(data = res2) + 
+  aes(y = res2, x = ind) + 
+  geom_point() + 
+  stat_smooth(method = 'lm', alpha = 0, formula = y~x)
+
+#Goldfeld-Quandt test
+
+# with point = 0.2
+gqtest(taylor_opt, point = 0.2, alternative = 'greater',order.by = df_long$YIELD) #PROBLEM
+gqtest(taylor_opt, point = 0.2, alternative = 'greater',order.by = df_long$INF) #PROBLEM
+gqtest(taylor_opt, point = 0.2, alternative = 'less',order.by = df_long$YEAR)
+gqtest(taylor_opt, point = 0.2, alternative = 'greater',order.by = df_long$EXC)
+gqtest(taylor_opt, point = 0.2, alternative = 'greater',order.by = df_long$RRATE)
+
+#since by BP test (see above) normality does NOT hold, we cannnot try the BP test:
+#Breush-Pagan Test. We could try the White test instead.
 
 
+# TESTING FOR CORRELATION OF RESIDUALS
+
+# Durbin-Watson test for serial correlation 
+dwtest(taylor_reg) # PROBLEM
 
 
+# Breusch-Godfrey test for serial correlation of order up to 3
+bgtest(taylor_reg, 3) #PROBLEM
 
 
-
-
+# even with more residuals, there still is a problem of serial correlation,
+# likely to be of order 2/3
 
 ######################### DYNAMIC VERSION ####################################
 
@@ -296,8 +367,6 @@ df$SHIFTED_RATE <- rr_shifted
 
 
 # IMPORTANT: DO NOT USE DW TEST
-
-
 reg_dynamic <- lm(RATE ~ SHIFTED_RATE + GAP + INF, data = df)
 
 summary(reg_dynamic)
@@ -326,5 +395,6 @@ library(corrplot)
 png(file="corr.png", res=300, width=2500, height=2500)
 corrplot(cor(df_short))
 dev.off()
+
 
 heatmap(x = cor(df_short), symm = TRUE)
