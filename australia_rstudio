@@ -307,10 +307,10 @@ resettest(taylor_opt,power = 2:3, type="fitted") #OK
 # TESTING FOR NORMALITY OF RESIDUALS
 res2 <- residuals(taylor_opt)
 res2 = data.frame(res2)
-res2$ind = rep(1:53)
 
-ggplot(res) +
-  aes(x = res) + 
+
+ggplot(res2) +
+  aes(x = res2) + 
   geom_histogram(aes(y = stat(count) / sum(count)), colour = 'black', fill = 'white',bins = 10) + 
   geom_density(alpha = .3, fill = "#FF6666",size = 1) + 
   labs(
