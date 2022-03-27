@@ -386,7 +386,7 @@ dwtest(taylor_opt) # PROBLEM
 bgtest(taylor_opt, 3) #PROBLEM
 
 
-# even with more residuals, there still is a problem of serial correlation,
+# even with more regressors, there still is a problem of serial correlation,
 # likely to be of order 2/3
 
 ######################### DYNAMIC VERSION ####################################
