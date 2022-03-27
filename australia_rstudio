@@ -361,31 +361,42 @@ bgtest(taylor_reg, 3) #PROBLEM
 
 # Adding lagged interest rates to the dataframe
 # IMPORTANT: The first term is simply set to the same year's value
-
 rr = df['RATE']
 rr_shifted <- c(rr$RATE[1],rr$RATE[1:length(rr$RATE) -1 ])
 df$SHIFTED_RATE <- rr_shifted
 
+df_dyn = df[c('YEAR','RATE','SHIFTED_RATE','GAP','INF')]
+df_dyn = df_dyn[df_dyn$YEAR > 1984,]
 
-# IMPORTANT: DO NOT USE DW TEST
-reg_dynamic <- lm(RATE ~ SHIFTED_RATE + GAP + INF, data = df)
 
+reg_dynamic <- lm(RATE ~ SHIFTED_RATE + GAP + INF, data = df_dyn)
 summary(reg_dynamic)
 
-# TESTING FOR AUTOCORRELATION
 
+
+# TESTING FOR AUTOCORRELATION
+# IMPORTANT: DO NOT USE DW TEST (not consistent for dynamic models)
 bgtest(reg_dynamic, 3)
 
 # introducing lagged interest rates seems to solve any problem of
 # autocorrelation up to order 3
 
-# TODO: implement remaining tests, make comparisons
-# TODO: test for
+# TESTING FOR LINEARITY OF PARAMETERS
+resettest(reg_dynamic, power = 2)
+resettest(reg_dynamic, power = 3) #problem
+
+#TESTING FOR NORMALITY OF RESIDUALS
+jarque.bera.test(residuals(reg_dynamic)) #problem
+
+#TESTING FOR HOMOSCEDASTICITY
+gqtest(reg_dynamic, point = 0.2, alternative = 'less',order.by = df_dyn$YEAR)
+gqtest(reg_dynamic, point = 0.2, alternative = 'greater',order.by = df_dyn$GAP)
+gqtest(reg_dynamic, point = 0.2, alternative = 'greater',order.by = df_dyn$INF)
 
 
 
 
-####################### EXTRA - TO BE ADDED WHERE NECESSARY #######################
+####################### EXTRA - FOR VISUALIZATION PURPOSES IN THE PRESENTATION #######################
 
 
 #analysis of correlation of regressors
@@ -399,3 +410,4 @@ dev.off()
 
 
 heatmap(x = cor(df_short), symm = TRUE)
+
