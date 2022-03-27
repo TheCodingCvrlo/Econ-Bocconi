@@ -200,7 +200,7 @@ gqtest(taylor_reg, point = 0.4, alternative = 'less',order.by = df_short$YEAR)
 #POINT = 0.4
 #H0 is strongly rejected: we may have a problem of heteroscedasticity
 
-#since by BP test (see above) normality hold, we can also try the BP test:
+#since by Jarque-Bera test (see above) normality hold, we can also try the BP test:
 #Breush-Pagan Test (taking output & inflation into consideration)
 bptest(taylor_reg) # varformula = output + inflation
 
