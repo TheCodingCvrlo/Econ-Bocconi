@@ -31,37 +31,37 @@ library(tidyverse)
 
 # importing data
 
-# output <- read.csv(paste(dirname(current_path),'australia_gdp.csv',sep = '/'))
-# rates <- read.csv(paste(dirname(current_path),'short_term_interest_rates.csv',sep = '/'))
-# inflation <- read.csv(paste(dirname(current_path),'inflation.csv',sep = '/'))
-# out_gap <- read.csv(paste(dirname(current_path),'inflation.csv',sep = '/'))
-# 
-# out_gap = select(out_gap,TIME,Value)
-# rates = select(rates, TIME, Value)
-# 
-# #renaming columns
-# colnames(inflation) <- c('YEAR', 'INF')
-# colnames(output) <- c('YEAR', 'GDP')
-# colnames(rates) <- c('YEAR', 'RATE')
-# colnames(out_gap) <- c('YEAR', 'GAP')
-# 
-# #setting cutoff
-# output <- output[output$YEAR > 1984,]
-# inflation <- inflation[inflation$YEAR > 1984,]
-# rates <- rates[rates$YEAR > 1984,]
-# 
-# # rescaling GDP (from USD to Billion USD)
-# output$GDP = output$GDP/1000000000
-# 
+output <- read.csv(paste(dirname(current_path),'australia_gdp.csv',sep = '/'))
+rates <- read.csv(paste(dirname(current_path),'st_int.csv',sep = '/'))
+inflation <- read.csv(paste(dirname(current_path),'inflation.csv',sep = '/'))
+out_gap <- read.csv(paste(dirname(current_path),'output_gap.csv',sep = '/'))
+unemp <- read.csv(paste(dirname(current_path),'unemployment.csv',sep = '/'))
+exchange_rate <- read.csv(paste(dirname(current_path),'exchange_rate.csv',sep = '/'))
+
+
+
+
+
+
+#renaming columns
+colnames(inflation) <- c('YEAR', 'INF')
+colnames(output) <- c('YEAR', 'GDP')
+colnames(rates) <- c('YEAR', 'RATE')
+colnames(out_gap) <- c('YEAR', 'GAP')
+colnames(unemp) <- c('YEAR', 'UNR')
+colnames(exchange_rate) <- c('YEAR', 'EXC')
+
+
+
+# rescaling GDP (from USD to Billion USD)
+output$GDP = output$GDP/1000000000     # DO NOT RUN TWICE
+
+
 
 #merging data in one dataframe
-
-# df <- list(rates, output, inflation,out_gap)
-# df = df %>% reduce(full_join, by = 'YEAR')
-# 
-# write.csv(df, paste(clean_path,'\\df_final.csv',sep = ''))
-
-df <- read.csv(paste(dirname(current_path),'df_final.csv',sep = '/'))
+df <- list(rates, output, inflation, out_gap,unemp,exchange_rate)
+df = df %>% reduce(full_join, by = 'YEAR')
+df = df[order(df$YEAR),]
 
 
 ################################## MODEL #######################################
@@ -84,7 +84,6 @@ df <- read.csv(paste(dirname(current_path),'df_final.csv',sep = '/'))
 
 ############################# PLOTTING RAW DATA #########################################
 
-
 # GDP/YEAR
 ggplot(df, aes(x = YEAR, y  = GDP)) + 
   geom_point() + 
@@ -94,10 +93,8 @@ ggplot(df, aes(x = YEAR, y  = GDP)) +
   ) +
   stat_smooth(method = 'lm', formula = y~x, alpha = 0.2)
 
-
-
 # POLICY RATE/YEAR
-ggplot(df, aes(x = YEAR, y  = RATE)) + 
+ggplot(rates, aes(x = YEAR, y  = RATE)) + 
   geom_point() + 
   labs(
     title = 'Policy Rates 1980-2020',
@@ -117,8 +114,7 @@ ggplot(df, aes(x = YEAR, y  = INF)) +
   stat_smooth(method = 'lm', formula = y~x)
 
 #OUT GAP/ YEAR
-
-ggplot(df, aes(x = YEAR, y  = GAP)) + 
+ggplot(out_gap, aes(x = YEAR, y  = GAP)) + 
   geom_point() + 
   labs(
     title = 'Output Gap as % of Potential Output',
@@ -129,24 +125,24 @@ ggplot(df, aes(x = YEAR, y  = GAP)) +
 
 
 
-
-
 ################################ OLS ESTIMATION ######################################
 
-taylor_reg <- lm(RATE ~ GDP + INF, data = df)
 
+# setting cutoff(output gap data available from 1985 onwards)
+df_short = df[df$YEAR > 1984,]
+
+# fitting the model
+taylor_reg <- lm(RATE ~ GAP + INF, data = df)
 summary(taylor_reg)
-coeftest(taylor_reg)
 
-ggplot(df) + 
+#plotting fitted vs true values
+ggplot(df_short) + 
   aes(x = YEAR) + 
   geom_point(aes(y = RATE)) + 
   geom_point(aes(y = fitted(taylor_reg)),color = 'red')
 
-#plotting distribution of residuals
-
+#plotting density of residuals
 res <- residuals(taylor_reg)
-
 res = data.frame(res)
 res$ind = rep(1:36)
 
@@ -162,52 +158,44 @@ ggplot(res) +
 
 ############################ TESTING MODEL ASSUMPTIONS ################################
 
-# TODO: complete, explain
+# TESTING FOR LINEARITY OF PARAMETERS
+resettest(taylor_reg,power = 2, type="fitted") # 2nd power significant?
+resettest(taylor_reg,power = 3, type="fitted")
 
-
-#Testing Linearity of Parameters
-resettest(taylor_reg,power = 2:3, type="fitted")
-
-#H0 is accepted with pval = 0.1217
-
-
-#Jarque-Bera Test for Normality of Residuals
+# TESTING FOR NORMALITY OF RESIDUALS
 jarque.bera.test(residuals(taylor_reg))     
-#H0 is accepted with pval = 0.618
+#H0 is accepted with pval = 0.1991
 
 
-# Testing Homoscedasticity
-
-# TODO: ADD RESIDUALS TO DF, SORT BY DESIRED VARIABLE (or compare different orderings)
-
-# preliminary analysis: plotting residuals
+# TESTING FOR HETEROSCEDASTICITY
+# preliminary analysis: plotting residuals (ordered by year)
 ggplot(data = res) + 
   aes(y = res, x = ind) + 
   geom_point() + 
-  
   stat_smooth(method = 'lm', alpha = 0, formula = y~x)
 
-#visual inspection suggesting very subtle downward trend, decreasing variance
+#visual inspection suggesting downward trend, decreasing variance
 
 #Goldfeld-Quandt test
-gqtest(taylor_reg, point = 0.4, alternative = 'less')
 
-#POINT = 0.2
-# H0 is accepted with a p-val of 0.748 for test against H1: increasing variance, 
-# still accepted but with a lower p-value (0.252) against H1. decreasing variance
+# with point = 0.2
+gqtest(taylor_reg, point = 0.2, alternative = 'less',order.by = df_short$GAP)
+gqtest(taylor_reg, point = 0.2, alternative = 'less',order.by = df_short$INF)
+gqtest(taylor_reg, point = 0.2, alternative = 'less',order.by = df_short$YEAR)
+
+# with point = 0.4
+gqtest(taylor_reg, point = 0.4, alternative = 'less',order.by = df_short$GAP)
+gqtest(taylor_reg, point = 0.4, alternative = 'less',order.by = df_short$INF)
+gqtest(taylor_reg, point = 0.4, alternative = 'less',order.by = df_short$YEAR)
 
 #POINT = 0.4
-
-#H0 is strongly rejected: we have a problem of heteroscedasticity
-
+#H0 is strongly rejected: we may have a problem of heteroscedasticity
 
 #since by BP test (see above) normality hold, we can also try the BP test:
 #Breush-Pagan Test (taking output & inflation into consideration)
 bptest(taylor_reg) # varformula = output + inflation
 
-#the BP test does not reject H0 for significance levels <=0.01
-
-#Testing Correlation of Residuals
+# TESTING FOR CORRELATION OF RESIDUALS
 
 # Durbin-Watson test for serial correlation 
 dwtest(taylor_reg)
@@ -216,83 +204,51 @@ dwtest(taylor_reg)
 bgtest(taylor_reg, 3)
 
 # DW test strongly rejects H0,
-# BG test (m = 3) rejects H0 down to alpha = 0.05.
+# BG test (m = 3) rejects H0 down to alpha = 0.008
 
 # Strong indicators of serial correlation hint to a likely problem of omitted variables.
 # ...hence we proceed to extend the model.
 
+
+
+
+
 ############################## EXTENDING THE MODEL ###############################
 
-# Introduction of the 'UNEMPLOYMENT' regressor
-unempl <- read.csv(paste(clean_path, '\\unemployment_rate.csv',sep = ''))
-unempl = select(unempl, TIME, Value)
-colnames(unempl) <- c('YEAR', 'UN')
-unempl <- unempl[unempl$YEAR > 1984,]
+# Additional Regressors:
+  #1. Unemployment Rate
+  #2. USD/AUD Exchange Rate
+  #3. Avg Commodity Price Index
+  #4. Foreign Interest Rates (US)
+  #5. US 10-Year Treasury Rate
 
-df$UN <- unempl$UN
+# DESCRIPTIVE STATISTICS
+
+# Introduction of the 'UNEMPLOYMENT' regressor
 
 #Plotting the data
-ggplot(unempl, aes(x = YEAR, y  = UN)) + 
+ggplot(unemp, aes(x = YEAR, y  = UNR)) + 
   geom_point() + 
   labs(
     title = 'Australian Unemployment rate 1985-2020',
     x = ''
   ) +
-  stat_smooth(method = 'lm', formula = y~x, alpha = 0.2)
-
-#Run the regression
-
-# GDP case
-reg_un_1 <- lm(RATE ~ GDP + INF + UN, data = df)
-summary(reg_un_1)
-coeftest(reg_un_1)
-# This way, the unemployment rate seems to be not statistically significant. The t-test has a p-value of 0.3131.
-
-# GAP case
-reg_un_2 <- lm(RATE ~ GAP + INF + UN, data = df)
-summary(reg_un_2)
-coeftest(reg_un_2)
-# This way instead the unemployment rate is statistically significant. The t-test has a p-value of 1.448e-05.
-
+  stat_smooth(method = 'lm', formula = y~x, alpha = 0)
 
 
 # Introduction of the 'U.S. DOLLARS TO AUSTRALIAN DOLLARS SPOT EXCHANGE RATES' regressor
-exc <- read.csv(paste(clean_path, '\\exchange_us.csv',sep = ''))
-colnames(exc) <- c('YEAR', 'EXC')
-exc <- exc[exc$YEAR > 1984,]
-
-df$EXC <- exc$EXC
 
 #Plotting the data
-ggplot(exc, aes(x = YEAR, y  = EXC)) + 
+ggplot(exchange_rate, aes(x = YEAR, y  = EXC)) + 
   geom_point() + 
   labs(
     title = 'U.S. Dollars to Australian Dollar Spot Exchange Rate 1985-2020',
     x = ''
   ) +
-  stat_smooth(method = 'lm', formula = y~x, alpha = 0.2)
-
-#Run the regression
-
-# GDP case
-reg_exc_1 <- lm(RATE ~ GDP + INF + UN + EXC, data = df)
-summary(reg_exc_1)
-coeftest(reg_exc_1)
-
-# GAP case
-reg_exc_2 <- lm(RATE ~ GAP + INF + UN + EXC, data = df)
-summary(reg_exc_2)
-coeftest(reg_exc_2)
-
+  stat_smooth(method = 'lm', formula = y~x, alpha = 0)
 
 
 # Introduction of the 'AVERAGE COMMODITY PRICE INDEX ($A)' regressor
-com <- read.csv(paste(clean_path, '\\commodity.csv',sep = ''))
-colnames(com) <- c('YEAR', 'PRICE')
-com <- com[com$YEAR > 1984,]
-com <- na.omit(com)
-
-df$COM <- com$PRICE
 
 #Plotting the data
 ggplot(com, aes(x = YEAR, y  = PRICE)) + 
@@ -303,43 +259,22 @@ ggplot(com, aes(x = YEAR, y  = PRICE)) +
   ) +
   stat_smooth(method = 'lm', formula = y~x, alpha = 0.2)
 
-#Run the regression
-
-# GDP case
-reg_com_1 <- lm(RATE ~ GDP + INF + EXC + UN + COM, data = df)
-summary(reg_com_1)
-coeftest(reg_com_1)
-
-# GAP case
-reg_com_2 <- lm(RATE ~ GAP + INF + COM + EXC, data = df)
-summary(reg_com_2)
-coeftest(reg_com_2)
-
-# Possible additional variables
-
-# US real interest rate
-real <- read.csv(paste(clean_path, '\\US_real_rate%.csv',sep = ''))
-colnames(real) <- c('YEAR', 'Rate')
-real <- real[real$YEAR > 1984,]
-
-#US 10-year Treasury yield
-tres <- read.csv(paste(clean_path, '\\US10y_treasury.csv',sep = ''))
-colnames(tres) <- c('YEAR', 'Rate')
-tres <- tres[tres$YEAR > 1984,]
 
 
 
-########################## ALTERNATIVE (GAP)  ############################
 
-reg_1 = lm(RATE ~ GAP + INF, data = df)
 
-summary(reg_1)
+##################### FEATURE SELECTION #########################
 
-# output gap seems to be nonsignificant??
+# Backwards vs Forward selection
 
-reg_2 = lm(RATE ~ GDP + INF, data = df)
 
-summary(reg_2)
+
+
+
+
+
+
 
 
 
@@ -349,10 +284,10 @@ summary(reg_2)
 
 
 # Adding lagged interest rates to the dataframe
-# IMPORTANT: The first term is simply set to the same year value
+# IMPORTANT: The first term is simply set to the same year's value
 
 rr = df['RATE']
-rr_shifted <- c(rr$RATE[1],rr$RATE[1:35])
+rr_shifted <- c(rr$RATE[1],rr$RATE[1:length(rr$RATE) -1 ])
 df$SHIFTED_RATE <- rr_shifted
 
 
@@ -376,10 +311,21 @@ bgtest(reg_dynamic, 3)
 
 
 
+####################### EXTRA - TO BE ADDED WHERE NECESSARY #######################
 
-#TODO - Variable Selection
-# pick features
-# wages? (correlation with output gap)
-# foreign interest rates?
-# lagged interest rates? (dynamic model, issues with testing)
-# forward/backward pass
+
+#analysis of correlation of regressors
+
+install.packages("corrplot")
+library(corrplot)
+
+
+corrplot(cor(df_short)) #to fix
+
+heatmap(x = cor(df_short), symm = TRUE)
+
+
+
+
+
+
