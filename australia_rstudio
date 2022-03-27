@@ -324,7 +324,7 @@ bgtest(reg_dynamic, 3)
 library(corrplot)
 
 png(file="corr.png", res=300, width=2500, height=2500)
-corrplot(cor(df_short)) #to fix
+corrplot(cor(df_short))
 dev.off()
 
 heatmap(x = cor(df_short), symm = TRUE)
