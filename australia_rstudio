@@ -379,11 +379,11 @@ gqtest(taylor_opt, point = 0.2, alternative = 'greater',order.by = df_long$RRATE
 # TESTING FOR CORRELATION OF RESIDUALS
 
 # Durbin-Watson test for serial correlation 
-dwtest(taylor_reg) # PROBLEM
+dwtest(taylor_opt) # PROBLEM
 
 
 # Breusch-Godfrey test for serial correlation of order up to 3
-bgtest(taylor_reg, 3) #PROBLEM
+bgtest(taylor_opt, 3) #PROBLEM
 
 
 # even with more residuals, there still is a problem of serial correlation,
