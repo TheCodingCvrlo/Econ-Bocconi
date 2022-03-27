@@ -373,7 +373,6 @@ gqtest(taylor_opt, point = 0.2, alternative = 'greater',order.by = df_long$EXC)
 gqtest(taylor_opt, point = 0.2, alternative = 'greater',order.by = df_long$RRATE)
 
 #since by BP test (see above) normality does NOT hold, we cannnot try the BP test:
-#Breush-Pagan Test. We could try the White test instead.
 
 
 # TESTING FOR CORRELATION OF RESIDUALS
