@@ -37,9 +37,9 @@ inflation <- read.csv(paste(dirname(current_path),'inflation.csv',sep = '/'))
 out_gap <- read.csv(paste(dirname(current_path),'output_gap.csv',sep = '/'))
 unemp <- read.csv(paste(dirname(current_path),'unemployment.csv',sep = '/'))
 exchange_rate <- read.csv(paste(dirname(current_path),'exchange_rate.csv',sep = '/'))
-
-
-
+USreal_rate <- read.csv(paste(dirname(current_path),'US_real_rate%.csv',sep = '/'))
+US10bond <- read.csv(paste(dirname(current_path),'US10y_bond.csv',sep = '/'))
+PPI_commodities <- read.csv(paste(dirname(current_path),'PPI_commodities.csv',sep = '/')) #Average Annual Producer Price Index (All Commodities)
 
 
 
@@ -50,6 +50,10 @@ colnames(rates) <- c('YEAR', 'RATE')
 colnames(out_gap) <- c('YEAR', 'GAP')
 colnames(unemp) <- c('YEAR', 'UNR')
 colnames(exchange_rate) <- c('YEAR', 'EXC')
+colnames(USreal_rate) <- c('YEAR', 'RRATE')
+colnames(US10bond) <- c('YEAR', 'YIELD')
+colnames(PPI_commodities) <- c('YEAR', 'PPI')
+
 
 
 
@@ -59,7 +63,7 @@ output$GDP = output$GDP/1000000000     # DO NOT RUN TWICE
 
 
 #merging data in one dataframe
-df <- list(rates, output, inflation, out_gap,unemp,exchange_rate)
+df <- list(rates, output, inflation, out_gap,unemp,exchange_rate, USreal_rate, US10bond, PPI_commodities)
 df = df %>% reduce(full_join, by = 'YEAR')
 df = df[order(df$YEAR),]
 
@@ -216,11 +220,11 @@ bgtest(taylor_reg, 3)
 ############################## EXTENDING THE MODEL ###############################
 
 # Additional Regressors:
-  #1. Unemployment Rate
-  #2. USD/AUD Exchange Rate
-  #3. Avg Commodity Price Index
-  #4. Foreign Interest Rates (US)
-  #5. US 10-Year Treasury Rate
+#1. Unemployment Rate
+#2. USD/AUD Exchange Rate
+#3. Avg Commodity Price Index
+#4. Foreign Interest Rates (US)
+#5. US 10-Year Treasury Rate
 
 # DESCRIPTIVE STATISTICS
 
@@ -248,10 +252,10 @@ ggplot(exchange_rate, aes(x = YEAR, y  = EXC)) +
   stat_smooth(method = 'lm', formula = y~x, alpha = 0)
 
 
-# Introduction of the 'AVERAGE COMMODITY PRICE INDEX ($A)' regressor
+# Introduction of the 'AVERAGE ANNUAL PRODUCER PRICE INDEX (All Commodities)' regressor
 
 #Plotting the data
-ggplot(com, aes(x = YEAR, y  = PRICE)) + 
+ggplot(PPI_commodities, aes(x = YEAR, y  = PPI)) + 
   geom_point() + 
   labs(
     title = 'Average Commodity Price Index ($A) 1985-2020',
@@ -316,16 +320,11 @@ bgtest(reg_dynamic, 3)
 
 #analysis of correlation of regressors
 
-install.packages("corrplot")
+#install.packages("corrplot")
 library(corrplot)
 
-
+png(file="corr.png", res=300, width=2500, height=2500)
 corrplot(cor(df_short)) #to fix
+dev.off()
 
 heatmap(x = cor(df_short), symm = TRUE)
-
-
-
-
-
-
