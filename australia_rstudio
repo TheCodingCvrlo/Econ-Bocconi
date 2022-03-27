@@ -37,7 +37,7 @@ inflation <- read.csv(paste(dirname(current_path),'inflation.csv',sep = '/'))
 out_gap <- read.csv(paste(dirname(current_path),'output_gap.csv',sep = '/'))
 unemp <- read.csv(paste(dirname(current_path),'unemployment.csv',sep = '/'))
 exchange_rate <- read.csv(paste(dirname(current_path),'exchange_rate.csv',sep = '/'))
-USreal_rate <- read.csv(paste(dirname(current_path),'US_real_rate%.csv',sep = '/'))
+USreal_rate <- read.csv(paste(dirname(current_path),'US_real_rate_.csv',sep = '/'))
 US10bond <- read.csv(paste(dirname(current_path),'US10y_bond.csv',sep = '/'))
 PPI_commodities <- read.csv(paste(dirname(current_path),'PPI_commodities.csv',sep = '/')) #Average Annual Producer Price Index (All Commodities)
 
